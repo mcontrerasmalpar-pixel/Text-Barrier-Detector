@@ -1,5 +1,11 @@
 # Text Barrier Detector
 
+[![CI](https://github.com/mcontrerasmalpar-pixel/Text-Barrier-Detector/actions/workflows/ci.yml/badge.svg)](https://github.com/mcontrerasmalpar-pixel/Text-Barrier-Detector/actions/workflows/ci.yml)
+[![npm core](https://img.shields.io/npm/v/@makitaki/text-barrier-core?label=%40makitaki%2Ftext-barrier-core)](https://www.npmjs.com/package/@makitaki/text-barrier-core)
+[![npm mcp](https://img.shields.io/npm/v/@makitaki/text-barrier-mcp?label=%40makitaki%2Ftext-barrier-mcp)](https://www.npmjs.com/package/@makitaki/text-barrier-mcp)
+[![MCP Registry](https://img.shields.io/badge/MCP%20Registry-official-0891b2)](https://registry.modelcontextprotocol.io/v0.1/servers?search=text-barrier-mcp)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+
 Deterministic readability and plain-language barrier detector for **English (`en`)** and **Spanish (`es`)** product docs, support copy, PR descriptions, and MCP / CLI workflows.
 
 **Live web app:** [text-barrier-detector.vercel.app](https://text-barrier-detector.vercel.app)  
