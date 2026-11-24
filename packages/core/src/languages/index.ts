@@ -1,9 +1,9 @@
 import { enPack } from './en.js';
-import { esPack } from './es.js';
+import { computeInflesz, esPack } from './es.js';
 import type { AnalysisLanguage, LanguagePack } from './types.js';
 
 export type { AnalysisLanguage, FormulaName, LanguagePack } from './types.js';
-export { enPack, esPack };
+export { computeInflesz, enPack, esPack };
 
 const PACKS: Record<AnalysisLanguage, LanguagePack> = { en: enPack, es: esPack };
 

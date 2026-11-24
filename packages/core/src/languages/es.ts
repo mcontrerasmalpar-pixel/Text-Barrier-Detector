@@ -43,11 +43,39 @@ const COMMON_TECHNICAL = new Set(
   ].map((w) => w.toLowerCase())
 );
 
-/** Fernández-Huerta: 206.84 - 1.02*P - 0.60*S (P = words/sentence, S = syllables/word). */
+/**
+ * Fernández-Huerta (1959): L = 206.84 - 0.60 * P - 1.02 * F
+ * where P = syllables per 100 words (100 * syllables / words)
+ * and   F = average words per sentence (words / sentences).
+ */
 function readingEase(words: number, sentences: number, syllables: number): number {
-  const P = words / sentences;
-  const S = syllables / words;
-  return 206.84 - 1.02 * P - 0.60 * S;
+  const P = (syllables / words) * 100;
+  const F = words / sentences;
+  return 206.84 - 0.60 * P - 1.02 * F;
+}
+
+/**
+ * INFLESZ / Szigriszt-Pazos (1993) perspicuity index for Spanish:
+ * I = 206.835 - 62.3 * (syllables / words) - (words / sentences).
+ * Clamped to [0, 100] with the Barrio-Cantalejo INFLESZ scale label.
+ */
+export function computeInflesz(
+  words: number,
+  sentences: number,
+  syllables: number
+): { score: number; label: string } {
+  if (words <= 0 || sentences <= 0) {
+    return { score: 0, label: 'Muy difícil' };
+  }
+  const raw = 206.835 - 62.3 * (syllables / words) - words / sentences;
+  const score = Math.round(Math.max(0, Math.min(100, raw)) * 10) / 10;
+  let label: string;
+  if (score >= 80) label = 'Muy fácil';
+  else if (score >= 65) label = 'Bastante fácil';
+  else if (score >= 55) label = 'Normal';
+  else if (score >= 40) label = 'Algo difícil';
+  else label = 'Muy difícil';
+  return { score, label };
 }
 
 export const esPack: LanguagePack = {

@@ -9,6 +9,8 @@ export type { AnalyzeOptions, AnalysisResult, SentenceAnalysis } from './analyze
 
 export { findBarriers } from './barriers.js';
 export { isIdentifierLike, removeMarkdownNoise, stripMarkdown } from './markdown.js';
+export { splitSentenceSpans } from './sentences.js';
+export type { SentenceSpan } from './sentences.js';
 export type { BarrierIssue, BarrierType } from './barriers.js';
 
 export { AnalysisError, MAX_INPUT_CHARS, validateInput } from './validation.js';
@@ -16,6 +18,7 @@ export type { AnalysisErrorCode, AnalysisErrorDetails } from './validation.js';
 
 export {
   SUPPORTED_LANGUAGES,
+  computeInflesz,
   enPack,
   esPack,
   getLanguagePack,
