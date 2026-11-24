@@ -9,6 +9,7 @@
 Deterministic readability and plain-language barrier detector for **English (`en`)** and **Spanish (`es`)** product docs, support copy, PR descriptions, and MCP / CLI workflows.
 
 **Live web app:** [text-barrier-detector.vercel.app](https://text-barrier-detector.vercel.app)  
+**GitHub App (diff-only PR reviews):** [Text Barrier Pro](https://text-barrier-pro.vercel.app) *(Free for public repos · Pro for private repos)*  
 **Packages:** [`@makitaki/text-barrier-core`](./packages/core) · [`@makitaki/text-barrier-mcp`](./packages/mcp)  
 **Author:** [Maria Contreras](https://github.com/mcontrerasmalpar-pixel)  
 **License:** [MIT](./LICENSE)
@@ -19,8 +20,8 @@ Deterministic readability and plain-language barrier detector for **English (`en
 
 | Package | Path | Version | Description |
 |---------|------|---------|-------------|
-| [`@makitaki/text-barrier-core`](./packages/core) | `packages/core` | `0.1.1` | Pure TypeScript readability & barrier detector (`analyze`, `findBarriers`). Zero runtime dependencies, no DOM, no network calls. |
-| [`@makitaki/text-barrier-mcp`](./packages/mcp) | `packages/mcp` | `0.1.1` | Official Model Context Protocol (`stdio`) server exposing `analyze_text`, `find_barriers`, and `check_file` for Claude Desktop, Cursor, and Claude Code. |
+| [`@makitaki/text-barrier-core`](./packages/core) | `packages/core` | `0.2.0` | Pure TypeScript readability & barrier detector (`analyze`, `findBarriers`, EN + ES with INFLESZ, smart sentence splitting, `ignoreWords`, `line`/`column`, `undefined_acronym`, `bureaucratic`). Zero runtime dependencies, no DOM, no network calls. |
+| [`@makitaki/text-barrier-mcp`](./packages/mcp) | `packages/mcp` | `0.2.0` | Official Model Context Protocol (`stdio`) server exposing `analyze_text`, `find_barriers`, and `check_file` for Claude Desktop, Cursor, and Claude Code. |
 | Web UI | `src/` | `1.0.0` | React + Vite web application importing `@makitaki/text-barrier-core`. |
 
 ---
