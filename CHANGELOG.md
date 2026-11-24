@@ -4,6 +4,24 @@ All notable changes to this project and its published packages (`@makitaki/text-
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-11-24
+
+### Fixed
+
+- **Spanish Fernández-Huerta formula (`es.ts`):** Corrected `P` to syllables per 100 words (`100 * syllables / words`) instead of syllables per word, eliminating score saturation at `100` on standard and dense Spanish prose.
+
+### Added
+
+- **INFLESZ / Szigriszt-Pazos (`es`):** `analyze` / `analyzeText` now populate `infleszScore` (0–100) and `infleszLabel` (Barrio-Cantalejo scale) for Spanish texts, and `computeInflesz` is exported from `@makitaki/text-barrier-core`.
+- **Smart sentence splitting (`splitSentenceSpans`):** Avoids false sentence boundaries on EN/ES abbreviations (`e.g.`, `i.e.`, `p. ej.`, `etc.`, `Dr.`, `Sr.`, `Sra.`, `art.`, `núm.`), single-letter initials (`J. K.`), version numbers (`v0.1.1`), and ellipses before lowercase words.
+- **Team glossary (`ignoreWords`):** Optional `ignoreWords?: string[]` in `AnalyzeOptions`, MCP tools (`analyze_text`, `find_barriers`, `check_file`), and CLI (`--ignore=word1,word2`) to suppress domain terms and acronyms.
+- **Line & column coordinates on barriers:** Every `BarrierIssue` now includes 1-based `line` and `column` fields alongside `start`/`end` offsets for editor and PR-diff annotations.
+- **New deterministic barrier types:**
+  - `undefined_acronym`: flags undefined 3–6 letter uppercase acronyms on first occurrence (ignoring universal tech acronyms, defined acronyms, and `ignoreWords`).
+  - `bureaucratic`: detects wordy/bureaucratic phrases in English and Spanish with simpler replacement suggestions.
+- **CLI Markdown warning (`scripts/analyze.mjs`):** Prints a hint to `stderr` (keeping `stdout` valid JSON) when backticks or a `.md`/`.mdx` file are passed without `--markdown`.
+- **Precision / Recall / F1 evaluation corpus:** Added labeled EN/ES evaluation tests verifying ≥ 0.90 Precision, Recall, and F1.
+
 ## [0.1.1] - 2026-11-20
 
 ### Added

@@ -1,10 +1,11 @@
 import { classifyLevel } from './levelClassifier.js';
 import type { LevelResult } from './levelClassifier.js';
 import { computeStructureScore } from './structure.js';
-import { getLanguagePack } from './languages/index.js';
+import { computeInflesz, getLanguagePack } from './languages/index.js';
 import type { AnalysisLanguage, FormulaName, LanguagePack } from './languages/index.js';
 import { validateInput } from './validation.js';
 import { isIdentifierLike, removeMarkdownNoise, stripMarkdown } from './markdown.js';
+import { splitSentenceSpans } from './sentences.js';
 export { AnalysisError, MAX_INPUT_CHARS } from './validation.js';
 export type { AnalysisErrorCode, AnalysisErrorDetails } from './validation.js';
 export type { AnalysisLanguage, FormulaName, LanguagePack } from './languages/index.js';
@@ -18,6 +19,11 @@ export interface AnalyzeOptions {
    * `findBarriers` still refer to the original string.
    */
   markdown?: boolean;
+  /**
+   * Case-insensitive list of domain/product words or acronyms to ignore when
+   * flagging complex words and undefined acronyms (team glossary).
+   */
+  ignoreWords?: string[];
 }
 
 export interface SentenceAnalysis {
@@ -49,10 +55,10 @@ export interface AnalysisResult {
   language: AnalysisLanguage;
   /** Readability formula applied to fleschScore */
   formulaName: FormulaName;
-}
-
-function splitSentences(text: string): string[] {
-  return text.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 0);
+  /** INFLESZ / Szigriszt-Pazos perspicuity score (0–100), populated when `language === 'es'`. */
+  infleszScore?: number;
+  /** Barrio-Cantalejo INFLESZ scale label, populated when `language === 'es'`. */
+  infleszLabel?: string;
 }
 
 function getWords(text: string, pack: LanguagePack): string[] {
@@ -63,12 +69,23 @@ function cleanWord(word: string, pack: LanguagePack): string {
   return word.replace(pack.wordCharsRe, '');
 }
 
-function findComplexWords(words: string[], pack: LanguagePack, markdown = false): string[] {
+function buildIgnoreSet(ignoreWords?: string[]): Set<string> {
+  if (!ignoreWords || ignoreWords.length === 0) return new Set();
+  return new Set(ignoreWords.map((w) => w.trim().toLowerCase()).filter(Boolean));
+}
+
+function findComplexWords(
+  words: string[],
+  pack: LanguagePack,
+  markdown = false,
+  ignoreSet: Set<string> = new Set()
+): string[] {
   return words
     .filter(w => !(markdown && isIdentifierLike(w)))
     .map(w => cleanWord(w, pack))
     .filter(w => {
       if (w.length === 0) return false;
+      if (ignoreSet.has(w.toLowerCase())) return false;
       if (pack.isCommonTechnical(w)) return false;
       return pack.countSyllables(w) >= pack.complexWordMinSyllables;
     });
@@ -90,17 +107,18 @@ function getEaseLabel(score: number): string {
 export function analyzeText(
   text: string,
   lang: AnalysisLanguage = 'en',
-  options: Pick<AnalyzeOptions, 'markdown'> = {}
+  options: Pick<AnalyzeOptions, 'markdown' | 'ignoreWords'> = {}
 ): AnalysisResult {
   validateInput(text, lang);
   const pack = getLanguagePack(lang);
   const markdown = options.markdown === true;
+  const ignoreSet = buildIgnoreSet(options.ignoreWords);
   // Compose combining marks so "o" + U+0301 and "ó" are analyzed identically.
   text = text.normalize('NFC');
   // In Markdown mode, prose metrics use a prose-only view; structure keeps headings and lists.
   const prose = markdown ? stripMarkdown(text) : text;
   const structureSource = markdown ? removeMarkdownNoise(text) : text;
-  const sentences = splitSentences(prose).map(s => (markdown ? s.replace(/\s+/g, ' ') : s));
+  const sentences = splitSentenceSpans(prose).map(s => (markdown ? s.text.replace(/\s+/g, ' ') : s.text));
   const allWords = getWords(prose, pack);
   const totalWords = allWords.length;
   const totalSentences = Math.max(sentences.length, 1);
@@ -130,7 +148,7 @@ export function analyzeText(
     const words = getWords(s, pack);
     const isLong = words.length > 20;
     const hasPassive = pack.isPassive(s);
-    const complex = findComplexWords(words, pack, markdown);
+    const complex = findComplexWords(words, pack, markdown, ignoreSet);
     if (hasPassive) passiveCount++;
     complexWordCount += complex.length;
     return { text: s, wordCount: words.length, isLong, hasPassiveVoice: hasPassive, complexWords: complex, index: i };
@@ -154,6 +172,9 @@ export function analyzeText(
   if (structureScore < 50) suggestions.push('Add paragraph breaks, headings, or lists to improve structure.');
   if (fleschScore < 50) suggestions.push('Simplify vocabulary and shorten sentences to improve readability.');
 
+  const inflesz =
+    lang === 'es' ? computeInflesz(totalWords, totalSentences, totalSyllables) : undefined;
+
   const partial = {
     sentences: sentenceAnalyses,
     fleschScore: Math.round(fleschScore * 10) / 10,
@@ -170,6 +191,7 @@ export function analyzeText(
     suggestions: suggestions.slice(0, 3),
     language: lang,
     formulaName: pack.formulaName,
+    ...(inflesz ? { infleszScore: inflesz.score, infleszLabel: inflesz.label } : {}),
   };
 
   return {
@@ -179,9 +201,13 @@ export function analyzeText(
 }
 
 /**
- * Analyze text readability with an options object (`{ lang?: 'en' | 'es', markdown?: boolean }`).
+ * Analyze text readability with an options object
+ * (`{ lang?: 'en' | 'es', markdown?: boolean, ignoreWords?: string[] }`).
  */
 export function analyze(text: string, options: AnalyzeOptions = {}): AnalysisResult {
   const lang = options.lang ?? 'en';
-  return analyzeText(text, lang, { markdown: options.markdown });
+  return analyzeText(text, lang, {
+    markdown: options.markdown,
+    ignoreWords: options.ignoreWords,
+  });
 }

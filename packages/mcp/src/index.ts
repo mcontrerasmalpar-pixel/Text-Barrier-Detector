@@ -36,6 +36,13 @@ export const markdownSchema = z
     'Set true when the text is Markdown: code blocks, tables, badges, URLs and link targets are ignored so only prose is scored. Offsets still refer to the original text. Defaults to false (check_file enables it automatically for .md files).'
   );
 
+export const ignoreWordsSchema = z
+  .array(z.string())
+  .optional()
+  .describe(
+    'Optional case-insensitive list of domain/product words or acronyms to ignore when flagging complex words and undefined acronyms (team glossary).'
+  );
+
 export const analyzeTextInputShape = {
   text: z
     .string()
@@ -44,6 +51,7 @@ export const analyzeTextInputShape = {
     ),
   lang: langSchema,
   markdown: markdownSchema,
+  ignoreWords: ignoreWordsSchema,
 };
 
 export const findBarriersInputShape = {
@@ -54,6 +62,7 @@ export const findBarriersInputShape = {
     ),
   lang: langSchema,
   markdown: markdownSchema,
+  ignoreWords: ignoreWordsSchema,
 };
 
 export const checkFileInputShape = {
@@ -63,6 +72,7 @@ export const checkFileInputShape = {
       'Path to a local .md or .txt file to analyze for readability metrics and barriers.'
     ),
   lang: langSchema,
+  ignoreWords: ignoreWordsSchema,
 };
 
 export interface FindBarriersOutput {
@@ -126,10 +136,15 @@ export function handleAnalyzeText(args: {
   text: unknown;
   lang?: string;
   markdown?: boolean;
+  ignoreWords?: string[];
 }): CallToolResult {
   try {
     const lang = normalizeLang(args.lang);
-    const result = analyze(args.text as string, { lang, markdown: args.markdown === true });
+    const result = analyze(args.text as string, {
+      lang,
+      markdown: args.markdown === true,
+      ignoreWords: args.ignoreWords,
+    });
     return toJsonResult(result);
   } catch (err) {
     if (err instanceof AnalysisError) {
@@ -144,16 +159,22 @@ export function handleAnalyzeText(args: {
 
 /**
  * Handler for `find_barriers(text, lang?)`.
- * Returns deterministic barrier issues (`passive`, `long_sentence`, `complex_word`).
+ * Returns deterministic barrier issues (`passive`, `long_sentence`,
+ * `complex_word`, `undefined_acronym`, `bureaucratic`).
  */
 export function handleFindBarriers(args: {
   text: unknown;
   lang?: string;
   markdown?: boolean;
+  ignoreWords?: string[];
 }): CallToolResult {
   try {
     const lang = normalizeLang(args.lang);
-    const issues = findBarriers(args.text as string, { lang, markdown: args.markdown === true });
+    const issues = findBarriers(args.text as string, {
+      lang,
+      markdown: args.markdown === true,
+      ignoreWords: args.ignoreWords,
+    });
     const output: FindBarriersOutput = {
       lang,
       count: issues.length,
@@ -178,6 +199,7 @@ export function handleFindBarriers(args: {
 export function handleCheckFile(args: {
   path: unknown;
   lang?: string;
+  ignoreWords?: string[];
 }): CallToolResult {
   try {
     const lang = normalizeLang(args.lang);
@@ -228,8 +250,8 @@ export function handleCheckFile(args: {
     const content = readFileSync(resolvedPath, 'utf8');
     // Markdown files are analyzed as prose only (code, tables, URLs are ignored).
     const markdown = ext === '.md';
-    const analysis = analyze(content, { lang, markdown });
-    const issues = findBarriers(content, { lang, markdown });
+    const analysis = analyze(content, { lang, markdown, ignoreWords: args.ignoreWords });
+    const issues = findBarriers(content, { lang, markdown, ignoreWords: args.ignoreWords });
 
     const output: CheckFileOutput = {
       path: args.path,
@@ -257,7 +279,7 @@ export function handleCheckFile(args: {
 export function createMcpServer(): McpServer {
   const server = new McpServer({
     name: '@makitaki/text-barrier-mcp',
-    version: '0.1.1',
+    version: '0.2.0',
   });
 
   const readOnlyAnnotations = {
@@ -272,11 +294,12 @@ export function createMcpServer(): McpServer {
     {
       title: 'Analyze Text Readability',
       description:
-        'Computes deterministic readability metrics (Flesch Reading Ease for EN, Fernández-Huerta for ES, Grade Level, structure score, overall score) and a CEFR-inspired Readability Band (A1–C2, not a certification).',
+        'Computes deterministic readability metrics (Flesch Reading Ease for EN, Fernández-Huerta & INFLESZ for ES, Grade Level, structure score, overall score) and a CEFR-inspired Readability Band (A1–C2, not a certification).',
       inputSchema: analyzeTextInputShape,
       annotations: readOnlyAnnotations,
     },
-    async ({ text, lang, markdown }) => handleAnalyzeText({ text, lang, markdown })
+    async ({ text, lang, markdown, ignoreWords }) =>
+      handleAnalyzeText({ text, lang, markdown, ignoreWords })
   );
 
   server.registerTool(
@@ -284,11 +307,12 @@ export function createMcpServer(): McpServer {
     {
       title: 'Find Text Readability Barriers',
       description:
-        'Returns a deterministic list of readability barriers (passive, long_sentence, complex_word) with start/end character offsets, sentence index, short reason, and language code.',
+        'Returns a deterministic list of readability barriers (passive, long_sentence, complex_word, undefined_acronym, bureaucratic) with start/end offsets, 1-based line/column coordinates, sentence index, short reason, and language code.',
       inputSchema: findBarriersInputShape,
       annotations: readOnlyAnnotations,
     },
-    async ({ text, lang, markdown }) => handleFindBarriers({ text, lang, markdown })
+    async ({ text, lang, markdown, ignoreWords }) =>
+      handleFindBarriers({ text, lang, markdown, ignoreWords })
   );
 
   server.registerTool(
@@ -300,7 +324,7 @@ export function createMcpServer(): McpServer {
       inputSchema: checkFileInputShape,
       annotations: readOnlyAnnotations,
     },
-    async ({ path, lang }) => handleCheckFile({ path, lang })
+    async ({ path, lang, ignoreWords }) => handleCheckFile({ path, lang, ignoreWords })
   );
 
   return server;
